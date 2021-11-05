@@ -1,5 +1,4 @@
-## Tips and Tricks
+## Bugs
 
-- Dont forget to have the same version of gradle like your android studio:
+- Dont forget to have the same version of gradle and android studio:
 
-line 16 in `android/build.gradle`
