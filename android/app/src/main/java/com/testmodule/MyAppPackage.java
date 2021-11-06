@@ -22,6 +22,7 @@ public class MyAppPackage implements ReactPackage {
         List<NativeModule> modules = new ArrayList<>();
 
         modules.add(new AccessModule(reactContext));
+        modules.add(new MyAutofillService());
 
         return modules;
     }

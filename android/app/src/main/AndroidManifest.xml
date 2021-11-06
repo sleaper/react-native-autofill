@@ -12,7 +12,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/AppTheme">
         <service
-            android:name=".MyAutofillService"
+            android:name="com.testmodule.MyAutofillService"
             android:enabled="true"
             android:exported="true"
             android:label="My Autofill Service"

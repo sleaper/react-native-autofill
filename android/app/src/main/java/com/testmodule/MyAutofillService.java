@@ -15,8 +15,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
+import com.facebook.react.bridge.NativeModule;
+
 @RequiresApi(api = Build.VERSION_CODES.O)
-public class MyAutofillService extends AutofillService {
+public class MyAutofillService extends AutofillService implements NativeModule {
 
     public MyAutofillService() {
         Log.e("CONSTUCTOR", "CALEED");
@@ -25,12 +27,39 @@ public class MyAutofillService extends AutofillService {
 
     @Override
     public void onFillRequest(@NonNull FillRequest request, @NonNull CancellationSignal cancellationSignal, @NonNull FillCallback callback) {
-        Log.e("LOL", "LOL");
+        Log.e("LOL onFillRequest", "LOL onFillRequest");
 
     }
 
     @Override
     public void onSaveRequest(@NonNull SaveRequest request, @NonNull SaveCallback callback) {
+        Log.e("LOL onFillRequest", "LOL onFillRequest");
+
+    }
+
+    @NonNull
+    @Override
+    public String getName() {
+        return "MyAutofillService";
+    }
+
+    @Override
+    public void initialize() {
+
+    }
+
+    @Override
+    public boolean canOverrideExistingModule() {
+        return false;
+    }
+
+    @Override
+    public void onCatalystInstanceDestroy() {
+
+    }
+
+    @Override
+    public void invalidate() {
 
     }
 }
