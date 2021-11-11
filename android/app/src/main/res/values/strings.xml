@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">testModule</string>
+    <string name="power">power</string>
 </resources>

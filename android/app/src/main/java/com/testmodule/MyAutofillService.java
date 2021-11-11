@@ -1,10 +1,7 @@
 package com.testmodule;
 
-import android.app.Service;
-import android.content.Intent;
 import android.os.Build;
 import android.os.CancellationSignal;
-import android.os.IBinder;
 import android.service.autofill.AutofillService;
 import android.service.autofill.FillCallback;
 import android.service.autofill.FillRequest;
@@ -35,6 +32,12 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     public void onSaveRequest(@NonNull SaveRequest request, @NonNull SaveCallback callback) {
         Log.e("LOL onFillRequest", "LOL onFillRequest");
 
+    }
+
+
+    public void getInlineSuggestionsRequest () {
+        Log.e("TEST", "InlineSuggestionsRequest");
+        return;
     }
 
     @NonNull

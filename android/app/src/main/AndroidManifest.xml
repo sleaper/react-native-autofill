@@ -12,18 +12,26 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/AppTheme">
         <service
-            android:name="com.testmodule.MyAutofillService"
-            android:enabled="true"
-            android:exported="true"
-            android:label="My Autofill Service"
+            android:name=".MyAutofillService"
+            android:label="Multi-Dataset Autofill Service"
             android:permission="android.permission.BIND_AUTOFILL_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.autofill.AutofillService" />
-            </intent-filter>
-
             <meta-data
                 android:name="android.autofill"
                 android:resource="@xml/service_configuration" />
+
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+        </service>
+
+        <service android:name=".MyAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
         </service>
 
         <activity
