@@ -24,6 +24,11 @@
             </intent-filter>
         </service>
 
+        <activity
+            android:name=".AuthActivity"
+            android:taskAffinity=".AuthActivity"
+            android:label="AuthActivity"/>
+
         <service android:name=".MyAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

@@ -1,7 +1,9 @@
 package com.testmodule;
 
+import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Build;
 import android.os.CancellationSignal;
@@ -11,6 +13,7 @@ import android.service.autofill.FillCallback;
 import android.service.autofill.FillContext;
 import android.service.autofill.FillRequest;
 import android.service.autofill.FillResponse;
+import android.service.autofill.InlinePresentation;
 import android.service.autofill.SaveCallback;
 import android.service.autofill.SaveInfo;
 import android.service.autofill.SaveRequest;
@@ -20,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillValue;
+import android.view.inputmethod.InlineSuggestionsRequest;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 
@@ -28,20 +32,15 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import com.facebook.react.bridge.NativeModule;
+import com.testmodule.util.InlineRequestHelper;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class MyAutofillService extends AutofillService implements NativeModule {
-
-
-    public MyAutofillService() {
-        Log.e("CONSTUCTOR", "CALEED");
-    }
-
-
 
     private static final String TAG = "DebugService";
 
@@ -55,7 +54,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
         // TODO(b/114236837): use its own preferences?
 
-        mAuthenticateResponses = false;
+        mAuthenticateResponses = true;
         mAuthenticateDatasets = false;
         mNumberDatasets = 4;
 
@@ -64,16 +63,11 @@ public class MyAutofillService extends AutofillService implements NativeModule {
                 + ", authDatasets=" + mAuthenticateDatasets);
     }
 
-    @NonNull
-    static AssistStructure getLatestAssistStructure(@NonNull FillRequest request) {
-        List<FillContext> fillContexts = request.getFillContexts();
-        return fillContexts.get(fillContexts.size() - 1).getStructure();
-    }
-
     @Override
     public void onFillRequest(FillRequest request, CancellationSignal cancellationSignal,
                               FillCallback callback) {
-        Log.d(TAG, "onFillRequest()");
+        Log.e("TEST", "HELLO");
+
 
         // Find autofillable fields
         AssistStructure structure = getLatestAssistStructure(request);
@@ -88,7 +82,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
         // Create response...
         FillResponse response;
-        if (false) {
+        if (mAuthenticateResponses) {
             int size = fields.size();
             String[] hints = new String[size];
             AutofillId[] ids = new AutofillId[size];
@@ -97,13 +91,13 @@ public class MyAutofillService extends AutofillService implements NativeModule {
                 ids[i] = fields.valueAt(i);
             }
 
-            //IntentSender authentication = SimpleAuthActivity.newIntentSenderForResponse(this, hints,
-                    //ids, mAuthenticateDatasets);
+            IntentSender authentication = AuthActivity.newIntentSenderForResponse(this, hints,
+                    ids, mAuthenticateDatasets);
             RemoteViews presentation = newDatasetPresentation(getPackageName(),
                     "Tap to auth response");
 
-           // response = new FillResponse.Builder()
-                   // .setAuthentication(ids, authentication, presentation).build();
+            response = new FillResponse.Builder()
+                    .setAuthentication(ids, authentication, presentation).build();
         } else {
             response = createResponse(this, fields, mNumberDatasets,mAuthenticateDatasets);
         }
@@ -248,18 +242,18 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         // 1.Add the dynamic datasets
         for (int i = 1; i <= numDatasets; i++) {
             Dataset unlockedDataset = newUnlockedDataset(fields, packageName, i);
-            if (false) {
+            if (authenticateDatasets) {
                 Dataset.Builder lockedDataset = new Dataset.Builder();
                 for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
                     String hint = field.getKey();
                     AutofillId id = field.getValue();
                     String value = i + "-" + hint;
-                    //IntentSender authentication =
-                           // MyAutofillService.newIntentSenderForDataset(context, unlockedDataset);
+                    IntentSender authentication =
+                            AuthActivity.newIntentSenderForDataset(context, unlockedDataset);
                     RemoteViews presentation = newDatasetPresentation(packageName,
                             "Tap to auth " + value);
-                    //lockedDataset.setValue(id, null, presentation)
-                            //.setAuthentication(authentication);
+                    lockedDataset.setValue(id, null, presentation)
+                            .setAuthentication(authentication);
                 }
                 response.addDataset(lockedDataset.build());
             } else {
@@ -282,6 +276,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     static Dataset newUnlockedDataset(@NonNull Map<String, AutofillId> fields,
                                       @NonNull String packageName, int i) {
         Dataset.Builder dataset = new Dataset.Builder();
+        // Fetch here data form react native app and pass them to dataset
         for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
             String hint = field.getKey();
             AutofillId id = field.getValue();
@@ -299,6 +294,23 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     }
 
     /**
+     * Displays a toast with the given message.
+     */
+    private void toast(@NonNull CharSequence message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Helper method to get the {@link AssistStructure} associated with the latest request
+     * in an autofill context.
+     */
+    @NonNull
+    static AssistStructure getLatestAssistStructure(@NonNull FillRequest request) {
+        List<FillContext> fillContexts = request.getFillContexts();
+        return fillContexts.get(fillContexts.size() - 1).getStructure();
+    }
+
+    /**
      * Helper method to create a dataset presentation with the given text.
      */
     @NonNull
@@ -309,13 +321,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         presentation.setTextViewText(R.id.text, text);
         presentation.setImageViewResource(R.id.icon, R.mipmap.ic_launcher);
         return presentation;
-    }
-
-    /**
-     * Displays a toast with the given message.
-     */
-    private void toast(@NonNull CharSequence message) {
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
     @NonNull
