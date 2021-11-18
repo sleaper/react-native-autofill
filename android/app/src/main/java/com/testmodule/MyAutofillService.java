@@ -1,10 +1,12 @@
 package com.testmodule;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.CancellationSignal;
 import android.service.autofill.AutofillService;
@@ -53,6 +55,14 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         super.onConnected();
 
         // TODO(b/114236837): use its own preferences?
+        //create own module for saving without encryption
+        //save data, and then load here
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+
+        String cookieName = sharedPreferences.getString("test", "not found");
+        Log.e("DATA", cookieName);
+
+
 
         mAuthenticateResponses = true;
         mAuthenticateDatasets = false;

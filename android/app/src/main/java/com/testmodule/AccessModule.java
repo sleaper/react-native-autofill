@@ -1,27 +1,34 @@
 package com.testmodule;
 
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 
-import java.util.ArrayList;
-import java.util.List;
+import android.content.Context;
+import android.content.SharedPreferences;
 
 import android.app.assist.AssistStructure;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.util.Log;
 import android.view.autofill.AutofillId;
+import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 
 public class AccessModule extends ReactContextBaseJavaModule {
+
+    SharedPreferences sharedpreferences;
+    public static final String MyPREFERENCES = "MyPrefs" ;
+
     public AccessModule(ReactApplicationContext context) {
         super(context);
-    }
 
-    public boolean test = false;
+        sharedpreferences = context.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+    }
 
     @Override
     public String getName() {
@@ -29,50 +36,27 @@ public class AccessModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void createAccessModule(String name, String location) {
-        //Log.e("TEST", String.valueOf(test));
+    public void saveItem(String key, String value) {
 
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+
+        editor.putString(key, value);
+        editor.commit();
+
+        Log.e("SAVED", "SAVED");
     }
 
-    
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    public void onFillRequest(AssistStructure assistStructure, Bundle bundle, CancellationSignal cancellationSignal) {
-        Log.e("LOOL", String.valueOf(test));
-       List<AssistStructure.ViewNode> emailFields = new ArrayList<>();
+    @ReactMethod
+    public void getItem(String key,  Promise promise) {
 
-       identifyEmailField(assistStructure.getWindowNodeAt(0).getRootViewNode(), emailFields);
-       if(emailFields.size() == 0) {
-           return;
-       }
-    }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    void identifyEmailField(AssistStructure.ViewNode node, List<AssistStructure.ViewNode> emailFields) {
-        if(node.getClassName().contains("EditText")) {
-            String viewId = node.getIdEntry();
-            if(viewId != null && (viewId.contains("email") || viewId.contains("username"))) {
-                emailFields.add(node);
-                return;
-            }
-        }
-        for(int i = 0; i<node.getChildCount(); i++) {
-            identifyEmailField(node.getChildAt(i), emailFields);
+        try {
+            String value = sharedpreferences.getString(key, "not Found");
+            promise.resolve(value);
+        } catch(Exception e) {
+            promise.reject("Create Event Error", e);
         }
     }
-
-
-
-    class ParsedStructure {
-        AutofillId usernameId;
-        AutofillId passwordId;
-    }
-
-    class UserData {
-        String username;
-        String password;
-    }
-
-
 
 
 

@@ -18,6 +18,7 @@ import {
   useColorScheme,
   View,
   TextInput,
+  Button,
 } from 'react-native';
 
 import {
@@ -28,8 +29,7 @@ import {
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 import AccessModule from './src/AccessModule';
-
-//const {AccessModule} = NativeModules;
+//import SInfo from 'react-native-sensitive-info';
 
 const Section: React.FC<{
   title: string;
@@ -66,9 +66,22 @@ const App = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
+  // const saveItem = async () => {
+  //   return SInfo.setItem('key1', 'value1', {
+  //     sharedPreferencesName: 'getDefaultSharedPreferences',
+  //     keychainService: 'myKeychain',
+  //   });
+  // };
+
+  // const getItem = async () => {
+  //   return SInfo.getItem('key1', {
+  //     sharedPreferencesName: 'mySharedPrefs',
+  //     keychainService: 'myKeychain',
+  //   });
+  // };
+
   const [text, onChangeText] = React.useState('Useless Text');
 
-  AccessModule.createAccessModule('test', 'test');
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
@@ -79,6 +92,19 @@ const App = () => {
           onChangeText={onChangeText}
           value={text}
           autoCompleteType="username"
+        />
+        <Button
+          title="Save something"
+          onPress={async () => {
+            AccessModule.saveItem('test', 'TVOJETESTSTES');
+          }}
+        />
+        <Button
+          title="get something"
+          onPress={async () => {
+            let test = await AccessModule.getItem('test');
+            console.log(test);
+          }}
         />
         <Header />
         <View
@@ -94,9 +120,6 @@ const App = () => {
           </Section>
           <Section title="Debug">
             <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
           </Section>
           <LearnMoreLinks />
         </View>
