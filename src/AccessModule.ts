@@ -8,9 +8,6 @@
 import {NativeModules} from 'react-native';
 const {AccessModule} = NativeModules;
 
-interface AccessModule {
-  saveItem(key: string, value: string): void;
-  getItem(key: string): string;
-}
+interface AccessModule {}
 
 export default AccessModule as AccessModule;

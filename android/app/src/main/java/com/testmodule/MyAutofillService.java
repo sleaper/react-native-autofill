@@ -33,7 +33,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.facebook.react.ReactInstanceManager;
+import com.facebook.react.ReactNativeHost;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.NativeModule;
+import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeArray;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.testmodule.util.InlineRequestHelper;
 
 import java.util.Collection;
@@ -54,29 +61,30 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     public void onConnected() {
         super.onConnected();
 
-        // TODO(b/114236837): use its own preferences?
-        //create own module for saving without encryption
-        //save data, and then load here
-        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", MODE_PRIVATE);
-
-        String cookieName = sharedPreferences.getString("test", "not found");
-        Log.e("DATA", cookieName);
-
-
-
-        mAuthenticateResponses = true;
+        mAuthenticateResponses = false;
         mAuthenticateDatasets = false;
         mNumberDatasets = 4;
-
-        Log.d(TAG, "onConnected(): numberDatasets=" + mNumberDatasets
-                + ", authResponses=" + mAuthenticateResponses
-                + ", authDatasets=" + mAuthenticateDatasets);
     }
 
     @Override
     public void onFillRequest(FillRequest request, CancellationSignal cancellationSignal,
                               FillCallback callback) {
         Log.e("TEST", "HELLO");
+
+        AccessModule ref = new AccessModule();
+
+        MainApplication application = (MainApplication) this.getApplication();
+
+        ReactNativeHost reactNativeHost = application.getReactNativeHost();
+        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
+        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+
+        if (reactContext != null) {
+            WritableNativeArray params = new WritableNativeArray();
+            params.pushString(request.toString());
+            reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit("EVENT_HAS_TRIGGERED", params);
+        }
 
 
         // Find autofillable fields

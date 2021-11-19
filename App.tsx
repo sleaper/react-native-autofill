@@ -8,7 +8,7 @@
  * @format
  */
 
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -19,6 +19,8 @@ import {
   View,
   TextInput,
   Button,
+  NativeEventEmitter,
+  NativeModules,
 } from 'react-native';
 
 import {
@@ -81,6 +83,13 @@ const App = () => {
   // };
 
   const [text, onChangeText] = React.useState('Useless Text');
+
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(NativeModules.AccessModule);
+    const eventListener = eventEmitter.addListener('NONE', event => {
+      console.log(event); // "someValue"
+    });
+  }, []);
 
   return (
     <SafeAreaView style={backgroundStyle}>
