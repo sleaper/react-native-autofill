@@ -71,7 +71,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
                               FillCallback callback) {
         Log.e("TEST", "HELLO");
 
-        AccessModule ref = new AccessModule();
+        //AccessModule ref = new AccessModule();
 
         MainApplication application = (MainApplication) this.getApplication();
 

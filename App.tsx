@@ -18,7 +18,6 @@ import {
   useColorScheme,
   View,
   TextInput,
-  Button,
   NativeEventEmitter,
   NativeModules,
 } from 'react-native';
@@ -30,8 +29,7 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
-import AccessModule from './src/AccessModule';
-//import SInfo from 'react-native-sensitive-info';
+//import AccessModule from './src/AccessModule';
 
 const Section: React.FC<{
   title: string;
@@ -68,27 +66,17 @@ const App = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  // const saveItem = async () => {
-  //   return SInfo.setItem('key1', 'value1', {
-  //     sharedPreferencesName: 'getDefaultSharedPreferences',
-  //     keychainService: 'myKeychain',
-  //   });
-  // };
-
-  // const getItem = async () => {
-  //   return SInfo.getItem('key1', {
-  //     sharedPreferencesName: 'mySharedPrefs',
-  //     keychainService: 'myKeychain',
-  //   });
-  // };
-
   const [text, onChangeText] = React.useState('Useless Text');
 
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(NativeModules.AccessModule);
-    const eventListener = eventEmitter.addListener('NONE', event => {
-      console.log(event); // "someValue"
-    });
+    const eventListener = eventEmitter.addListener(
+      'EVENT_HAS_TRIGGERED',
+      event => {
+        console.log(event); // "someValue"
+        // send data to JAva
+      },
+    );
   }, []);
 
   return (
@@ -101,19 +89,6 @@ const App = () => {
           onChangeText={onChangeText}
           value={text}
           autoCompleteType="username"
-        />
-        <Button
-          title="Save something"
-          onPress={async () => {
-            AccessModule.saveItem('test', 'TVOJETESTSTES');
-          }}
-        />
-        <Button
-          title="get something"
-          onPress={async () => {
-            let test = await AccessModule.getItem('test');
-            console.log(test);
-          }}
         />
         <Header />
         <View

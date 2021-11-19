@@ -26,22 +26,18 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
-public class AccessModule<LocalBroadcastReceiver> extends ReactContextBaseJavaModule {
+public class AccessModule extends ReactContextBaseJavaModule {
 
     SharedPreferences sharedpreferences;
 
     private ReactContext mReactContext;
-    private LocalBroadcastReceiver mLocalBroadcastReceiver;
 
 
-    public static final String MyPREFERENCES = "MyPrefs" ;
 
     public AccessModule(ReactApplicationContext context) {
         super(context);
         this.mReactContext = context;
         Log.e("CONTEXT", mReactContext.toString());
-
-        sharedpreferences = context.getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
     }
 
     public AccessModule() {
