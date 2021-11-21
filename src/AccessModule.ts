@@ -8,6 +8,13 @@
 import {NativeModules} from 'react-native';
 const {AccessModule} = NativeModules;
 
-interface AccessModule {}
+interface readableMap {
+  username: string;
+  password: string;
+  androidUri: string;
+}
+interface AccessModule {
+  sendData: (readableMap: readableMap[]) => boolean;
+}
 
 export default AccessModule as AccessModule;

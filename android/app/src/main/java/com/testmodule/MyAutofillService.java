@@ -1,13 +1,16 @@
 package com.testmodule;
 
 import android.annotation.SuppressLint;
-import android.app.PendingIntent;
+import android.app.ActivityManager;
 import android.app.assist.AssistStructure;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
-import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.service.autofill.AutofillService;
 import android.service.autofill.Dataset;
@@ -15,7 +18,6 @@ import android.service.autofill.FillCallback;
 import android.service.autofill.FillContext;
 import android.service.autofill.FillRequest;
 import android.service.autofill.FillResponse;
-import android.service.autofill.InlinePresentation;
 import android.service.autofill.SaveCallback;
 import android.service.autofill.SaveInfo;
 import android.service.autofill.SaveRequest;
@@ -25,7 +27,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillValue;
-import android.view.inputmethod.InlineSuggestionsRequest;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 
@@ -33,6 +34,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.facebook.react.HeadlessJsTaskService;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.bridge.Arguments;
@@ -41,12 +43,13 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.testmodule.util.InlineRequestHelper;
 
+import java.lang.reflect.Field;
 import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class MyAutofillService extends AutofillService implements NativeModule {
@@ -56,6 +59,19 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     private boolean mAuthenticateResponses;
     private boolean mAuthenticateDatasets;
     private int mNumberDatasets;
+    private static MainApplication sApplication;
+    private static String AutofillWebDomain;
+
+    public static MainApplication getInstance() {
+        return sApplication;
+    }
+
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        sApplication = (MainApplication) this.getApplication();
+    }
 
     @Override
     public void onConnected() {
@@ -63,40 +79,68 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
         mAuthenticateResponses = false;
         mAuthenticateDatasets = false;
-        mNumberDatasets = 4;
+        mNumberDatasets = 1;
+
+        sendEvent("onConnected");
+
+        if (!isAppOnForeground((this))) {
+            Intent intent = new Intent(this, MyTaskService.class);
+            Bundle bundle = new Bundle();
+
+            bundle.putString("foo", "bar");
+            intent.putExtras(bundle);
+
+            this.startService(intent);
+        }
+
     }
 
+    private boolean isAppOnForeground(Context context) {
+        /**
+         We need to check if app is in foreground otherwise the app will crash.
+         http://stackoverflow.com/questions/8489993/check-android-application-is-in-foreground-or-not
+         **/
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> appProcesses =
+                activityManager.getRunningAppProcesses();
+        if (appProcesses == null) {
+            return false;
+        }
+        final String packageName = context.getPackageName();
+        for (ActivityManager.RunningAppProcessInfo appProcess : appProcesses) {
+            if (appProcess.importance ==
+                    ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                    appProcess.processName.equals(packageName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void onFillRequest(FillRequest request, CancellationSignal cancellationSignal,
                               FillCallback callback) {
-        Log.e("TEST", "HELLO");
-
-        //AccessModule ref = new AccessModule();
-
-        MainApplication application = (MainApplication) this.getApplication();
-
-        ReactNativeHost reactNativeHost = application.getReactNativeHost();
-        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
-        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
-
-        if (reactContext != null) {
-            WritableNativeArray params = new WritableNativeArray();
-            params.pushString(request.toString());
-            reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit("EVENT_HAS_TRIGGERED", params);
-        }
-
-
         // Find autofillable fields
         AssistStructure structure = getLatestAssistStructure(request);
+
         ArrayMap<String, AutofillId> fields = getAutofillableFields(structure);
         Log.d(TAG, "autofillable fields:" + fields);
+
+
+
+
+        //GEt here name of the application
+        // Search data and take by androidUri
 
         if (fields.isEmpty()) {
             toast("No autofill hints found");
             callback.onSuccess(null);
             return;
         }
+
 
         // Create response...
         FillResponse response;
@@ -152,11 +196,21 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     /**
      * Adds any autofillable view from the {@link AssistStructure.ViewNode} and its descendants to the map.
      */
+
     private void addAutofillableFields(@NonNull Map<String, AutofillId> fields,
                                        @NonNull AssistStructure.ViewNode node) {
         String hint = getHint(node);
         if (hint != null) {
             AutofillId id = node.getAutofillId();
+
+            StringBuilder webDomainBuilder = new StringBuilder();
+            parseWebDomain(node, webDomainBuilder);
+            String webDomain = webDomainBuilder.toString();
+            if(webDomain.length() > 0) {
+                Log.e("SETTER", "setting Domain");
+                AutofillWebDomain = webDomain;
+            }// set here name of app
+
             if (!fields.containsKey(hint)) {
                 Log.v(TAG, "Setting hint '" + hint + "' on " + id);
                 fields.put(hint, id);
@@ -165,9 +219,26 @@ public class MyAutofillService extends AutofillService implements NativeModule {
                         + " because it was already set");
             }
         }
+
         int childrenSize = node.getChildCount();
         for (int i = 0; i < childrenSize; i++) {
             addAutofillableFields(fields, node.getChildAt(i));
+        }
+
+    }
+
+    private void parseWebDomain(AssistStructure.ViewNode viewNode, StringBuilder validWebDomain) {
+        String webDomain = viewNode.getWebDomain();
+        if (webDomain != null) {
+            Log.e("child web domain: %s", webDomain);
+            if (validWebDomain.length() > 0) {
+                if (!webDomain.equals(validWebDomain.toString())) {
+                    throw new SecurityException("Found multiple web domains: valid= "
+                            + validWebDomain + ", child=" + webDomain);
+                }
+            } else {
+                validWebDomain.append(webDomain);
+            }
         }
     }
 
@@ -256,6 +327,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
                                        @NonNull ArrayMap<String, AutofillId> fields, int numDatasets,
                                        boolean authenticateDatasets) {
         String packageName = context.getPackageName();
+
         FillResponse.Builder response = new FillResponse.Builder();
         // 1.Add the dynamic datasets
         for (int i = 1; i <= numDatasets; i++) {
@@ -291,24 +363,42 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         return response.build();
     }
 
-    static Dataset newUnlockedDataset(@NonNull Map<String, AutofillId> fields,
-                                      @NonNull String packageName, int i) {
-        Dataset.Builder dataset = new Dataset.Builder();
-        // Fetch here data form react native app and pass them to dataset
-        for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
-            String hint = field.getKey();
-            AutofillId id = field.getValue();
-            String value = i + "-" + hint;
 
-            // We're simple - our dataset values are hardcoded as "N-hint" (for example,
-            // "1-username", "2-username") and they're displayed as such, except if they're a
-            // password
-            String displayValue = hint.contains("password") ? "password for #" + i : value;
-            RemoteViews presentation = newDatasetPresentation(packageName, displayValue);
-            dataset.setValue(id, AutofillValue.forText(value), presentation);
+
+     static Dataset newUnlockedDataset(@NonNull Map<String, AutofillId> fields,
+                                       @NonNull String packageName, int i) {
+         Dataset.Builder dataset = new Dataset.Builder();
+
+         for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
+             String hint = field.getKey();
+             AutofillId id = field.getValue();
+             String value = i + "-" + hint;
+
+             // We're simple - our dataset values are hardcoded as "N-hint" (for example,
+             // "1-username", "2-username") and they're displayed as such, except if they're a
+             // password
+             String displayValue = hint.contains("password") ? "password for #" + i : value;
+             RemoteViews presentation = newDatasetPresentation(packageName, displayValue);
+             dataset.setValue(id, AutofillValue.forText(value), presentation);
+         }
+
+         return dataset.build();
+    }
+
+
+    static void sendEvent(String evetName) {
+       // MainApplication application = (MainApplication) this.getApplication();
+
+        ReactNativeHost reactNativeHost = sApplication.getReactNativeHost();
+        ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
+        ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+
+        if (reactContext != null) {
+            WritableMap params = Arguments.createMap();
+            params.putString(evetName, "true");
+            reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit(evetName, params);
         }
-
-        return dataset.build();
     }
 
     /**

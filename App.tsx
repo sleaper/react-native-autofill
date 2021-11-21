@@ -22,14 +22,8 @@ import {
   NativeModules,
 } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-//import AccessModule from './src/AccessModule';
+import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
+import AccessModule from './src/AccessModule';
 
 const Section: React.FC<{
   title: string;
@@ -68,15 +62,26 @@ const App = () => {
 
   const [text, onChangeText] = React.useState('Useless Text');
 
+  const [data, setData] = React.useState([
+    {
+      username: 'testicek',
+      password: 'pepa',
+      androidUri: 'com.testmodule',
+    },
+    {
+      username: 'Ahoj',
+      password: 'strejdo',
+      androidUri: ' www.skolaonline.cz',
+    },
+  ]);
+
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(NativeModules.AccessModule);
-    const eventListener = eventEmitter.addListener(
-      'EVENT_HAS_TRIGGERED',
-      event => {
-        console.log(event); // "someValue"
-        // send data to JAva
-      },
-    );
+    const eventListener = eventEmitter.addListener('onConnected', event => {
+      console.log(event);
+      AccessModule.sendData(data);
+    });
+    //eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -85,11 +90,6 @@ const App = () => {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
-        <TextInput
-          onChangeText={onChangeText}
-          value={text}
-          autoCompleteType="username"
-        />
         <Header />
         <View
           style={{
@@ -99,13 +99,11 @@ const App = () => {
             Edit <Text style={styles.highlight}>App.tsx</Text> to change this
             screen and then come back to see your edits.
           </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <LearnMoreLinks />
+          <TextInput
+            onChangeText={onChangeText}
+            value={text}
+            autoCompleteType="username"
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
