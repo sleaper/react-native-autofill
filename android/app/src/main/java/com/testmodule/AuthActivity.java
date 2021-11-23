@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import org.json.JSONException;
 
 
 /**
@@ -40,12 +41,18 @@ public class AuthActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.simple_service_auth_activity);
-        findViewById(R.id.yes).setOnClickListener((view) -> onYes());
+        findViewById(R.id.yes).setOnClickListener((view) -> {
+            try {
+                onYes();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        });
         findViewById(R.id.no).setOnClickListener((view) -> onNo());
     }
 
     @RequiresApi(api = Build.VERSION_CODES.R)
-    private void onYes() {
+    private void onYes() throws JSONException {
         Intent myIntent = getIntent();
         Intent replyIntent = new Intent();
         Dataset dataset = myIntent.getParcelableExtra(EXTRA_DATASET);

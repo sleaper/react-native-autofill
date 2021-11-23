@@ -5,6 +5,7 @@ import android.app.ActivityManager;
 import android.app.assist.AssistStructure;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -44,12 +45,19 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class MyAutofillService extends AutofillService implements NativeModule {
@@ -61,11 +69,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     private int mNumberDatasets;
     private static MainApplication sApplication;
     private static String AutofillWebDomain;
-
-    public static MainApplication getInstance() {
-        return sApplication;
-    }
-
 
     @Override
     public void onCreate() {
@@ -95,6 +98,35 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
     }
 
+    private String retriveNewApp() {
+        if (Build.VERSION.SDK_INT >= 21) {
+            String currentApp = null;
+            UsageStatsManager usm = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
+            long time = System.currentTimeMillis();
+            List<UsageStats> applist = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 1000 * 1000, time);
+            if (applist != null && applist.size() > 0) {
+                SortedMap<Long, UsageStats> mySortedMap = new TreeMap<>();
+                for (UsageStats usageStats : applist) {
+                    mySortedMap.put(usageStats.getLastTimeUsed(), usageStats);
+                }
+                if (mySortedMap != null && !mySortedMap.isEmpty()) {
+                    currentApp = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
+                }
+            }
+            Log.e(TAG, "Current App in foreground is: " + currentApp);
+
+            return currentApp;
+
+        } else {
+
+            ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            String mm=(manager.getRunningTasks(1).get(0)).topActivity.getPackageName();
+            Log.e(TAG, "Current App in foreground is: " + mm);
+            return mm;
+
+        }
+    }
+
     private boolean isAppOnForeground(Context context) {
         /**
          We need to check if app is in foreground otherwise the app will crash.
@@ -119,7 +151,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
 
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void onFillRequest(FillRequest request, CancellationSignal cancellationSignal,
                               FillCallback callback) {
@@ -129,7 +160,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         ArrayMap<String, AutofillId> fields = getAutofillableFields(structure);
         Log.d(TAG, "autofillable fields:" + fields);
 
-
+        Log.e("LOLICEK", retriveNewApp());
 
 
         //GEt here name of the application
@@ -143,7 +174,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
 
         // Create response...
-        FillResponse response;
+        FillResponse response = null;
         if (mAuthenticateResponses) {
             int size = fields.size();
             String[] hints = new String[size];
@@ -161,7 +192,11 @@ public class MyAutofillService extends AutofillService implements NativeModule {
             response = new FillResponse.Builder()
                     .setAuthentication(ids, authentication, presentation).build();
         } else {
-            response = createResponse(this, fields, mNumberDatasets,mAuthenticateDatasets);
+            try {
+                response = createResponse(this, fields, mNumberDatasets, mAuthenticateDatasets);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
 
         // ... and return it
@@ -200,7 +235,10 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     private void addAutofillableFields(@NonNull Map<String, AutofillId> fields,
                                        @NonNull AssistStructure.ViewNode node) {
         String hint = getHint(node);
+
+
         if (hint != null) {
+            Log.e("HINTS", hint);
             AutofillId id = node.getAutofillId();
 
             StringBuilder webDomainBuilder = new StringBuilder();
@@ -209,7 +247,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
             if(webDomain.length() > 0) {
                 Log.e("SETTER", "setting Domain");
                 AutofillWebDomain = webDomain;
-            }// set here name of app
+            }
 
             if (!fields.containsKey(hint)) {
                 Log.v(TAG, "Setting hint '" + hint + "' on " + id);
@@ -224,7 +262,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         for (int i = 0; i < childrenSize; i++) {
             addAutofillableFields(fields, node.getChildAt(i));
         }
-
     }
 
     private void parseWebDomain(AssistStructure.ViewNode viewNode, StringBuilder validWebDomain) {
@@ -245,8 +282,11 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     @Nullable
     protected String getHint(@NonNull AssistStructure.ViewNode node) {
 
-        // First try the explicit autofill hints...
+        // Compare viewHints
+        //If were any found return them ???
+        // safe viewHints in onSafeRequest
 
+        // First try the explicit autofill hints...
         String[] hints = node.getAutofillHints();
         if (hints != null) {
             // We're simple, we only care about the first hint
@@ -256,6 +296,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         // Then try some rudimentary heuristics based on other node properties
 
         String viewHint = node.getHint();
+        Log.e("ViewHint", viewHint + " " + node.toString());
         String hint = inferHint(node, viewHint);
         if (hint != null) {
             Log.d(TAG, "Found hint using view hint(" + viewHint + "): " + hint);
@@ -325,31 +366,36 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
     static FillResponse createResponse(@NonNull Context context,
                                        @NonNull ArrayMap<String, AutofillId> fields, int numDatasets,
-                                       boolean authenticateDatasets) {
+                                       boolean authenticateDatasets) throws JSONException {
         String packageName = context.getPackageName();
 
         FillResponse.Builder response = new FillResponse.Builder();
-        // 1.Add the dynamic datasets
-        for (int i = 1; i <= numDatasets; i++) {
-            Dataset unlockedDataset = newUnlockedDataset(fields, packageName, i);
-            if (authenticateDatasets) {
-                Dataset.Builder lockedDataset = new Dataset.Builder();
-                for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
-                    String hint = field.getKey();
-                    AutofillId id = field.getValue();
-                    String value = i + "-" + hint;
-                    IntentSender authentication =
-                            AuthActivity.newIntentSenderForDataset(context, unlockedDataset);
-                    RemoteViews presentation = newDatasetPresentation(packageName,
-                            "Tap to auth " + value);
-                    lockedDataset.setValue(id, null, presentation)
-                            .setAuthentication(authentication);
-                }
-                response.addDataset(lockedDataset.build());
-            } else {
-                response.addDataset(unlockedDataset);
-            }
-        }
+
+        Dataset unlockedDataset = newUnlockedDataset(fields, packageName);
+        response.addDataset(unlockedDataset);
+
+
+//        // 1.Add the dynamic datasets
+//        for (int i = 1; i <= numDatasets; i++) {
+//            Dataset unlockedDataset = newUnlockedDataset(fields, packageName, i);
+//            if (authenticateDatasets) {
+//                Dataset.Builder lockedDataset = new Dataset.Builder();
+//                for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
+//                    String hint = field.getKey();
+//                    AutofillId id = field.getValue();
+//                    String value = i + "-" + hint;
+//                    IntentSender authentication =
+//                            AuthActivity.newIntentSenderForDataset(context, unlockedDataset);
+//                    RemoteViews presentation = newDatasetPresentation(packageName,
+//                            "Tap to auth " + value);
+//                    lockedDataset.setValue(id, null, presentation)
+//                            .setAuthentication(authentication);
+//                }
+//                response.addDataset(lockedDataset.build());
+//            } else {
+//                response.addDataset(unlockedDataset);
+//            }
+        //}
 
         // 2.Add save info
         Collection<AutofillId> ids = fields.values();
@@ -366,20 +412,44 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
 
      static Dataset newUnlockedDataset(@NonNull Map<String, AutofillId> fields,
-                                       @NonNull String packageName, int i) {
+                                       @NonNull String packageName) throws JSONException {
          Dataset.Builder dataset = new Dataset.Builder();
 
          for (Map.Entry<String, AutofillId> field : fields.entrySet()) {
              String hint = field.getKey();
              AutofillId id = field.getValue();
-             String value = i + "-" + hint;
+
+//             String value;
+//             if(AutofillWebDomain != null) {
+//                 for (int i = 0; i < AccessModule.getReadableArray().length(); i++) {
+//                     JSONObject item = AccessModule.getReadableArray().getJSONObject(i);
+//
+//                     if(item.getString("androidUri") == retriveNewApp()) {
+//                         if(hint.contains("password")) {
+//                             value = item.getString("password");
+//                         } else {
+//                             value = item.getString("username");
+//                         }
+//                     }
+//
+//
+//                 }
+//             } else {
+//
+//             }
+//
+//             if(hint.contains("password")) {
+//                 //value = password
+//             } else {
+//                 //value = username
+//             }
 
              // We're simple - our dataset values are hardcoded as "N-hint" (for example,
              // "1-username", "2-username") and they're displayed as such, except if they're a
              // password
-             String displayValue = hint.contains("password") ? "password for #" + i : value;
-             RemoteViews presentation = newDatasetPresentation(packageName, displayValue);
-             dataset.setValue(id, AutofillValue.forText(value), presentation);
+             //String displayValue = username //hint.contains("password") ? "password for #" + i : value;
+             RemoteViews presentation = newDatasetPresentation(packageName, "test");
+             dataset.setValue(id, AutofillValue.forText("test"), presentation);
          }
 
          return dataset.build();
@@ -387,8 +457,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
 
     static void sendEvent(String evetName) {
-       // MainApplication application = (MainApplication) this.getApplication();
-
         ReactNativeHost reactNativeHost = sApplication.getReactNativeHost();
         ReactInstanceManager reactInstanceManager = reactNativeHost.getReactInstanceManager();
         ReactContext reactContext = reactInstanceManager.getCurrentReactContext();

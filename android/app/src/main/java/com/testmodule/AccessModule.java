@@ -82,7 +82,9 @@ public class AccessModule extends ReactContextBaseJavaModule   {
     @ReactMethod
     public void sendData(ReadableArray readableArray) throws JSONException {
         mReadableArray = convertArrayToJson(readableArray);
-        Log.e("LOL", convertArrayToJson(readableArray).toString());
+        for (int i = 0; i < mReadableArray.length(); i++) {
+            Log.e("LOL",  mReadableArray.getJSONObject(i).toString());
+        }
         return;
     }
 
