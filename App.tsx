@@ -8,7 +8,7 @@
  * @format
  */
 
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -17,20 +17,13 @@ import {
   Text,
   useColorScheme,
   View,
-  NativeModules,
   TextInput,
+  NativeEventEmitter,
+  NativeModules,
 } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
 import AccessModule from './src/AccessModule';
-
-//const {AccessModule} = NativeModules;
 
 const Section: React.FC<{
   title: string;
@@ -69,18 +62,41 @@ const App = () => {
 
   const [text, onChangeText] = React.useState('Useless Text');
 
-  AccessModule.createAccessModule('test', 'test');
+  const [data, setData] = React.useState([
+    {
+      username: 'testicek',
+      password: 'pepa',
+      androidUri: 'com.testmodule',
+      usernameHint: 'test',
+      passwordHint: 'test',
+    },
+    {
+      username: 'Ahoj',
+      password: 'strejdo',
+      androidUri: ' www.skolaonline.cz',
+      usernameHint: 'Uživatelské jméno',
+      passwordHint: 'Heslo',
+    },
+  ]);
+
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(NativeModules.AccessModule);
+    const eventListener = eventEmitter.addListener('onConnected', event => {
+      console.log(event);
+      AccessModule.sendData(data);
+    });
+
+    AccessModule.sendData(data);
+
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
-        <TextInput
-          onChangeText={onChangeText}
-          value={text}
-          autoCompleteType="username"
-        />
         <Header />
         <View
           style={{
@@ -90,16 +106,11 @@ const App = () => {
             Edit <Text style={styles.highlight}>App.tsx</Text> to change this
             screen and then come back to see your edits.
           </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+          <TextInput
+            onChangeText={onChangeText}
+            value={text}
+            autoCompleteType="username"
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
