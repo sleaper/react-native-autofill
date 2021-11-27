@@ -64,16 +64,9 @@ const App = () => {
 
   const [data, setData] = React.useState([
     {
-      username: 'testicek',
-      password: 'pepa',
-      androidUri: 'com.testmodule',
-      usernameHint: 'test',
-      passwordHint: 'test',
-    },
-    {
       username: 'Ahoj',
       password: 'strejdo',
-      androidUri: ' www.skolaonline.cz',
+      androidUri: 'www.skolaonline.cz',
       usernameHint: 'Uživatelské jméno',
       passwordHint: 'Heslo',
     },
