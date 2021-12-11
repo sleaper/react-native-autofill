@@ -15,6 +15,7 @@ interface readableMap {
 }
 interface AccessModule {
   sendData: (readableMap: readableMap[]) => boolean;
+  getData: () => Promise<string>;
 }
 
 export default AccessModule as AccessModule;

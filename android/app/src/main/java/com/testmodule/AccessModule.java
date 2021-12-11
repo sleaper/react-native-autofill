@@ -59,7 +59,7 @@ public class AccessModule extends ReactContextBaseJavaModule   {
 
     private static JSONArray mReadableArray;
     private static ReactApplicationContext reactContext;
-    private  SharedPreferences myPrefs;
+    private SharedPreferences myPrefs;
 
     public AccessModule(@Nonnull ReactApplicationContext context) {
         super(context);
@@ -81,27 +81,6 @@ public class AccessModule extends ReactContextBaseJavaModule   {
 
         myPrefs = context.getSharedPreferences("myPrefs", MODE_PRIVATE);
     }
-
-    public static String convertStreamToString(InputStream is) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        StringBuilder sb = new StringBuilder();
-        String line = null;
-        while ((line = reader.readLine()) != null) {
-            sb.append(line).append("\n");
-        }
-        reader.close();
-        return sb.toString();
-    }
-
-    public static String getStringFromFile (String filePath) throws Exception {
-        File fl = new File(filePath);
-        FileInputStream fin = new FileInputStream(fl);
-        String ret = convertStreamToString(fin);
-        //Make sure you close all streams.
-        fin.close();
-        return ret;
-    }
-
 
     private boolean isAppOnForeground(Context context) {
         /**
@@ -161,52 +140,15 @@ public class AccessModule extends ReactContextBaseJavaModule   {
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @ReactMethod
-    public void sendData(ReadableArray readableArray) throws JSONException, IOException {
-        mReadableArray = convertArrayToJson(readableArray);
-        SharedPreferences.Editor e = myPrefs.edit();
-        e.putString("data", readableArray.toString()); // add or overwrite someValue
-        e.commit(); // this saves to disk and notifies observers
-        
-//        for (int i = 0; i < mReadableArray.length(); i++) {
-//            Log.e("LOL",  mReadableArray.getJSONObject(i).toString());
-//        }
-        return;
-    }
-
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public void writeToFile(String data) throws IOException {
-        String path =
-                Environment.getExternalStorageDirectory() + "/" + "testmodule/";
-        // Create the folder.
-        File dir = new File(path);
-        if (!dir.getParentFile().exists())
-            dir.getParentFile().mkdirs();
-        if (!dir.exists())
-            dir.createNewFile();
-
-        // Create the file.
-        File file = new File(dir +"/data.txt");
-        Log.e("DIR", dir.toString() + " " + file.toString());
-
-        // Save your stream, don't forget to flush() it before closing it.
-
-        try
-        {
-            file.createNewFile();
-            FileOutputStream fOut = new FileOutputStream(file);
-            OutputStreamWriter myOutWriter = new OutputStreamWriter(fOut);
-            myOutWriter.append(data);
-
-            myOutWriter.close();
-
-            fOut.flush();
-            fOut.close();
+    public void sendData(ReadableArray readableArray) throws JSONException {
+        Log.e("ERROR", readableArray.toString());
+        if(readableArray.size() > 0) {
+            mReadableArray = convertArrayToJson(readableArray);
+            SharedPreferences.Editor e = myPrefs.edit();
+            e.putString("data", readableArray.toString()); // add or overwrite someValue
+            e.apply(); // this saves to disk and notifies observers
         }
-        catch (IOException e)
-        {
-            Log.e("Exception", "File write failed: " + e.toString());
-        }
+
     }
 
     private static JSONArray convertArrayToJson(ReadableArray readableArray) throws JSONException {

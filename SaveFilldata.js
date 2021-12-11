@@ -1,20 +1,29 @@
 import {NativeEventEmitter, NativeModules} from 'react-native';
 import AccessModule from './src/AccessModule';
+import RNSInfo from 'react-native-sensitive-info';
 
 module.exports = async taskData => {
-  let data = [
-    {
-      username: 'Ahoj',
-      password: 'strejdo',
-      androidUri: 'www.skolaonline.cz',
-      usernameHint: 'Uživatelské jméno',
-      passwordHint: 'Heslo',
-    },
-  ];
-
   const eventEmitter = new NativeEventEmitter(NativeModules.AccessModule);
-  const eventListener = eventEmitter.addListener('onConnected', event => {
+  const onConnected = eventEmitter.addListener('onConnected', async event => {
     console.log(event);
-    AccessModule.sendData(data);
+
+    const gettingFirstData = await RNSInfo.getItem('data', {
+      sharedPreferencesName: 'mySharedPrefs',
+      keychainService: 'myKeychain',
+    });
+    console.log('initial data', JSON.parse(gettingFirstData));
+    if (gettingFirstData) {
+      AccessModule.sendData(gettingFirstData);
+    }
+  });
+
+  const pswSaved = eventEmitter.addListener('pswSaved', async event => {
+    console.log(event);
+
+    const savingFirstData = await RNSInfo.setItem('data', event.pswSaved, {
+      sharedPreferencesName: 'mySharedPrefs',
+      keychainService: 'myKeychain',
+    });
+    console.log('saving', savingFirstData);
   });
 };

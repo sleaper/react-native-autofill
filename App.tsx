@@ -20,10 +20,11 @@ import {
   TextInput,
   NativeEventEmitter,
   NativeModules,
+  Button,
 } from 'react-native';
 
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
-import AccessModule from './src/AccessModule';
+import RNSInfo from 'react-native-sensitive-info';
 
 const Section: React.FC<{
   title: string;
@@ -53,7 +54,7 @@ const Section: React.FC<{
   );
 };
 
-const App = () => {
+const App = props => {
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
@@ -72,17 +73,12 @@ const App = () => {
     },
   ]);
 
-  useEffect(() => {
-    const eventEmitter = new NativeEventEmitter(NativeModules.AccessModule);
-    const eventListener = eventEmitter.addListener('onConnected', event => {
-      console.log(event);
-      AccessModule.sendData(data);
+  const myFunc = async (data: string) => {
+    return RNSInfo.setItem('data', data, {
+      sharedPreferencesName: 'mySharedPrefs',
+      keychainService: 'myKeychain',
     });
-
-    AccessModule.sendData(data);
-
-    //eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  };
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -104,6 +100,7 @@ const App = () => {
             value={text}
             autoCompleteType="username"
           />
+          <Button title={'save'} onPress={() => myFunc(data.toString())} />
         </View>
       </ScrollView>
     </SafeAreaView>
