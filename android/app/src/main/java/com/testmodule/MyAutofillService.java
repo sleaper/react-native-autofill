@@ -1,11 +1,15 @@
 package com.testmodule;
 
+import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
+import android.app.usage.UsageEvents;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -15,6 +19,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
+import android.provider.Settings;
 import android.service.autofill.AutofillService;
 import android.service.autofill.Dataset;
 import android.service.autofill.FillCallback;
@@ -36,6 +41,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
 
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
@@ -71,13 +77,17 @@ public class MyAutofillService extends AutofillService implements NativeModule {
     private static int _pendingIntentId = 0;
     private static final String EXTRA_URI = "androidUri";
     private int nodeCount = 1;
+    public static String PACKAGE_NAME;
 
     @Override
     public void onCreate() {
         super.onCreate();
         sApplication = (MainApplication) this.getApplication();
+
+        PACKAGE_NAME = getApplicationContext().getPackageName();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.P)
     @Override
     public void onConnected() {
         super.onConnected();
@@ -86,6 +96,37 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         mAuthenticateResponses = false;
         mAuthenticateDatasets = false;
         mNumberDatasets = 1;
+        String test = "";
+        UsageStatsManager usm = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
+
+
+
+        long time = System.currentTimeMillis();
+        List<UsageStats> applist = usm.queryUsageStats(UsageStatsManager.INTERVAL_MONTHLY, time - 1000 * 1000, time);
+
+        if (applist != null && applist.size() > 0) {
+            Log.e("USM", applist.toString());
+            SortedMap<Long, UsageStats> mySortedMap = new TreeMap<>();
+            for (UsageStats usageStats : applist) {
+                mySortedMap.put(usageStats.getLastTimeUsed(), usageStats);
+            }
+            if (mySortedMap != null && !mySortedMap.isEmpty()) {
+                test = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
+            }
+        }
+
+        //TODO
+        // SOlve here the problem with permission and then finish it!!!
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.PACKAGE_USAGE_STATS)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted
+            Log.e(TAG, "DENIED");
+            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
+
+        Log.e(TAG, "TEST: " + test);
 
 
         myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
@@ -99,7 +140,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
             Intent intent = new Intent(this, MyTaskService.class);
             Bundle bundle = new Bundle();
 
-            bundle.putString("foo", "bar");
+            //bundle.putString("foo", "bar");
             intent.putExtras(bundle);
 
             this.startService(intent);
@@ -114,10 +155,12 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         if (Build.VERSION.SDK_INT >= 21) {
             String currentApp = null;
             UsageStatsManager usm = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
+
             long time = System.currentTimeMillis();
             List<UsageStats> applist = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 1000 * 1000, time);
 
             if (applist != null && applist.size() > 0) {
+                Log.e("USM", applist.toString());
                 SortedMap<Long, UsageStats> mySortedMap = new TreeMap<>();
                 for (UsageStats usageStats : applist) {
                     mySortedMap.put(usageStats.getLastTimeUsed(), usageStats);
@@ -139,6 +182,21 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
         }
     }
+
+    private String getApplicationName(Context context, String data, int flag) {
+
+        final PackageManager pckManager = context.getPackageManager();
+        ApplicationInfo applicationInformation;
+        try {
+            applicationInformation = pckManager.getApplicationInfo(data, flag);
+        } catch (PackageManager.NameNotFoundException e) {
+            applicationInformation = null;
+        }
+        final String applicationName = (String) (applicationInformation != null ? pckManager.getApplicationLabel(applicationInformation) : "(unknown)");
+        return applicationName;
+
+    }
+
 
     private boolean isAppOnForeground(Context context) {
         /**
@@ -362,7 +420,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 //
 //            } else {
                 androidUri = retriveNewApp();
-                Log.e("PLS", androidUri);
+                Log.e("PLS", String.valueOf(getApplication()));
                 if (!fields.containsKey(hint)) {
                     Log.v(TAG, "Setting hint '" + hint + "' on " + id);
                     fields.put(hint, id);
@@ -491,8 +549,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
             for (int i = 0; i < data.length(); i++) {
                 JSONObject item = data.getJSONObject(i);
                 if(item.getString("androidUri").equals(androidUri)) {
-                    //Log.e("TEST", androidUri + " " + item.getString("androidUri"));
-                    //hasUri = true;
                     Dataset unlockedDataset = fieldDataset(fields, packageName, item);
                     response.addDataset(unlockedDataset);
                 }

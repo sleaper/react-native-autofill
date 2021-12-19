@@ -13,7 +13,7 @@ module.exports = async taskData => {
     });
     console.log('initial data', JSON.parse(gettingFirstData));
     if (gettingFirstData) {
-      AccessModule.sendData(gettingFirstData);
+      AccessModule.sendData(JSON.parse(gettingFirstData));
     }
   });
 

@@ -65,16 +65,17 @@ const App = props => {
 
   const [data, setData] = React.useState([
     {
-      username: 'Ahoj',
-      password: 'strejdo',
-      androidUri: 'www.skolaonline.cz',
-      usernameHint: 'Uživatelské jméno',
-      passwordHint: 'Heslo',
+      username: 'fdsadsa',
+      password: 'tedsast',
+      androidUri: 'com.example.android.autofill.app',
+      usernameHint: 'username',
+      passwordHint: 'password',
     },
   ]);
 
-  const myFunc = async (data: string) => {
-    return RNSInfo.setItem('data', data, {
+  const myFunc = async data => {
+    console.log(JSON.stringify(data));
+    return RNSInfo.setItem('data', JSON.stringify(data), {
       sharedPreferencesName: 'mySharedPrefs',
       keychainService: 'myKeychain',
     });
@@ -100,7 +101,7 @@ const App = props => {
             value={text}
             autoCompleteType="username"
           />
-          <Button title={'save'} onPress={() => myFunc(data.toString())} />
+          <Button title={'save'} onPress={() => myFunc(data)} />
         </View>
       </ScrollView>
     </SafeAreaView>

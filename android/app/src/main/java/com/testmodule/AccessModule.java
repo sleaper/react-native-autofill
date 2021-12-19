@@ -65,15 +65,11 @@ public class AccessModule extends ReactContextBaseJavaModule   {
         super(context);
         this.reactContext = reactContext;
 
-//        WritableMap params = Arguments.createMap();
-//        params.putString("onConnect", "true");
-//        sendEvent(reactContext, "onConnect", params);
-
         if (!isAppOnForeground((this.getReactApplicationContext()))) {
             Intent intent = new Intent(this.getReactApplicationContext(), MyTaskService.class);
             Bundle bundle = new Bundle();
 
-            bundle.putString("foo", "bar");
+            //bundle.putString("foo", "bar");
             intent.putExtras(bundle);
 
             this.getReactApplicationContext().startService(intent);
