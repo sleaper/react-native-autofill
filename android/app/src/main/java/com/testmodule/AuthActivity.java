@@ -68,7 +68,7 @@ public class AuthActivity extends Activity {
                 fields.put(hints[i], (AutofillId) ids[i]);
             }
             FillResponse response =
-                    MyAutofillService.createResponse(this, fields, 1, authenticateDatasets);
+                    MyAutofillService.createResponse(this, fields);
             replyIntent.putExtra(EXTRA_AUTHENTICATION_RESULT, response);
 
         }

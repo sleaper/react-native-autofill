@@ -16,7 +16,10 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.common.LifecycleState;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AppOpsManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -25,16 +28,20 @@ import android.content.SharedPreferences;
 
 import android.app.assist.AssistStructure;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.autofill.AutofillId;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -53,7 +60,9 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import static android.app.AppOpsManager.OPSTR_GET_USAGE_STATS;
 import static android.content.Context.MODE_PRIVATE;
+import static android.os.Process.myUid;
 
 public class AccessModule extends ReactContextBaseJavaModule   {
 
@@ -137,7 +146,7 @@ public class AccessModule extends ReactContextBaseJavaModule   {
     @RequiresApi(api = Build.VERSION_CODES.O)
     @ReactMethod
     public void sendData(ReadableArray readableArray) throws JSONException {
-        Log.e("ERROR", readableArray.toString());
+        Log.e("sendedData", readableArray.toString());
         if(readableArray.size() > 0) {
             mReadableArray = convertArrayToJson(readableArray);
             SharedPreferences.Editor e = myPrefs.edit();
@@ -146,6 +155,34 @@ public class AccessModule extends ReactContextBaseJavaModule   {
         }
 
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @ReactMethod
+    public void requirePermission() {
+
+//        AppOpsManager appOps = (AppOpsManager) this.getReactApplicationContext().getSystemService(Context.APP_OPS_SERVICE);
+//        int mode = appOps.checkOpNoThrow(OPSTR_GET_USAGE_STATS, myUid(), this.getReactApplicationContext().getPackageName());
+//        Log.e("MODE", String.valueOf(mode));
+//
+//        if(mode == 3) {
+//            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+//            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//            this.getReactApplicationContext().startActivity(intent);
+//        }
+
+
+//        if (ContextCompat.checkSelfPermission(this.getReactApplicationContext(), Manifest.permission.PACKAGE_USAGE_STATS)
+//                != PackageManager.PERMISSION_GRANTED) {
+//            // Permission is not granted
+//            Log.e("PERMISSION", "DENIED");
+//
+//            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+//            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//            this.getReactApplicationContext().startActivity(intent);
+//        }
+    }
+
+
 
     private static JSONArray convertArrayToJson(ReadableArray readableArray) throws JSONException {
         JSONArray array = new JSONArray();

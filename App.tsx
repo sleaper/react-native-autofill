@@ -25,6 +25,7 @@ import {
 
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
 import RNSInfo from 'react-native-sensitive-info';
+import AccessModule from './src/AccessModule';
 
 const Section: React.FC<{
   title: string;
@@ -80,6 +81,10 @@ const App = props => {
       keychainService: 'myKeychain',
     });
   };
+
+  useEffect(() => {
+    AccessModule.requirePermission();
+  }, []);
 
   return (
     <SafeAreaView style={backgroundStyle}>

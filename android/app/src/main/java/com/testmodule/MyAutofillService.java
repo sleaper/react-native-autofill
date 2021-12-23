@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AppOpsManager;
 import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
 import android.app.usage.UsageEvents;
@@ -41,6 +42,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.facebook.react.ReactInstanceManager;
@@ -62,6 +64,10 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static android.app.AppOpsManager.OPSTR_GET_USAGE_STATS;
+import static android.os.Process.myUid;
+import static androidx.core.app.AppOpsManagerCompat.MODE_ALLOWED;
+
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class MyAutofillService extends AutofillService implements NativeModule {
 
@@ -69,7 +75,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
     private boolean mAuthenticateResponses;
     private boolean mAuthenticateDatasets;
-    private int mNumberDatasets;
     private static MainApplication sApplication;
     private static String androidUri;
     private static JSONArray data;
@@ -95,36 +100,25 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         
         mAuthenticateResponses = false;
         mAuthenticateDatasets = false;
-        mNumberDatasets = 1;
         String test = "";
-        UsageStatsManager usm = (UsageStatsManager) this.getSystemService(Context.USAGE_STATS_SERVICE);
 
 
+        AppOpsManager appOps = (AppOpsManager) this.getApplicationContext().getSystemService(Context.APP_OPS_SERVICE);
+        int mode = appOps.checkOpNoThrow(OPSTR_GET_USAGE_STATS, myUid(), this.getApplicationContext().getPackageName());
+        Log.e("MODE", String.valueOf(mode));
 
-        long time = System.currentTimeMillis();
-        List<UsageStats> applist = usm.queryUsageStats(UsageStatsManager.INTERVAL_MONTHLY, time - 1000 * 1000, time);
-
-        if (applist != null && applist.size() > 0) {
-            Log.e("USM", applist.toString());
-            SortedMap<Long, UsageStats> mySortedMap = new TreeMap<>();
-            for (UsageStats usageStats : applist) {
-                mySortedMap.put(usageStats.getLastTimeUsed(), usageStats);
-            }
-            if (mySortedMap != null && !mySortedMap.isEmpty()) {
-                test = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
-            }
-        }
-
-        //TODO
-        // SOlve here the problem with permission and then finish it!!!
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.PACKAGE_USAGE_STATS)
-                != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted
-            Log.e(TAG, "DENIED");
+        if(mode != 0) {
             Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         }
+
+        //TODO
+        // SOlve here the problem with permission and then finish it!!!
+        // returns -1 all the time
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.PACKAGE_USAGE_STATS)
+//                != PackageManager.PERMISSION_GRANTED) {
+//        }
 
         Log.e(TAG, "TEST: " + test);
 
@@ -150,7 +144,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
     }
 
-
     private String retriveNewApp() {
         if (Build.VERSION.SDK_INT >= 21) {
             String currentApp = null;
@@ -160,7 +153,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
             List<UsageStats> applist = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 1000 * 1000, time);
 
             if (applist != null && applist.size() > 0) {
-                Log.e("USM", applist.toString());
                 SortedMap<Long, UsageStats> mySortedMap = new TreeMap<>();
                 for (UsageStats usageStats : applist) {
                     mySortedMap.put(usageStats.getLastTimeUsed(), usageStats);
@@ -182,21 +174,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
         }
     }
-
-    private String getApplicationName(Context context, String data, int flag) {
-
-        final PackageManager pckManager = context.getPackageManager();
-        ApplicationInfo applicationInformation;
-        try {
-            applicationInformation = pckManager.getApplicationInfo(data, flag);
-        } catch (PackageManager.NameNotFoundException e) {
-            applicationInformation = null;
-        }
-        final String applicationName = (String) (applicationInformation != null ? pckManager.getApplicationLabel(applicationInformation) : "(unknown)");
-        return applicationName;
-
-    }
-
 
     private boolean isAppOnForeground(Context context) {
         /**
@@ -230,9 +207,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         AssistStructure structure = getLatestAssistStructure(request);
         ArrayMap<String, AutofillId> fields = getAutofillableFields(structure);
 
-        //GEt here name of the application
-        // Search data and take by androidUri
-
         if (fields.isEmpty()) {
             toast("No autofill hints found");
             callback.onSuccess(null);
@@ -260,7 +234,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
                     .setAuthentication(ids, authentication, presentation).build();
         } else {
             try {
-                response = createResponse(this, fields, mNumberDatasets, mAuthenticateDatasets);
+                response = createResponse(this, fields);
             } catch (JSONException e) {
                 response = null;
                 e.printStackTrace();
@@ -279,21 +253,12 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
         AssistStructure structure = context.get(context.size() - 1).getStructure();
 
-        // Traverse the structure looking for data to save // get here JSONObject??
         Object fields = null;
         try {
             fields = getSavaFields(structure);
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
-        //TODO
-        // wrong formating of the object
-        // fuck popup and web pages
-        // Remove sending data on event OnConnect
-        // OnConnect heck data in prefStorage if null == send def from react native, if == something return prefStorage to react native
-
-
 
         data.put(fields);
         Log.e("OnSaveRequest", data.toString());
@@ -405,11 +370,9 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         if (hint != null) {
             AutofillId id = node.getAutofillId();
 
-            // if is node from web save webDomain
-            // If is node from web save by getInputType
             StringBuilder webDomainBuilder = new StringBuilder();
             parseWebDomain(node, webDomainBuilder);
-            String webDomain = webDomainBuilder.toString();
+//            String webDomain = webDomainBuilder.toString();
 //            if(webDomain.length() > 0) {
 //                androidUri = webDomain;
 //
@@ -420,7 +383,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 //
 //            } else {
                 androidUri = retriveNewApp();
-                Log.e("PLS", String.valueOf(getApplication()));
+
                 if (!fields.containsKey(hint)) {
                     Log.v(TAG, "Setting hint '" + hint + "' on " + id);
                     fields.put(hint, id);
@@ -538,8 +501,7 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 
     @RequiresApi(api = Build.VERSION_CODES.P)
     static FillResponse createResponse(@NonNull Context context,
-                                       @NonNull ArrayMap<String, AutofillId> fields, int numDatasets,
-                                       boolean authenticateDatasets) throws JSONException {
+                                       @NonNull ArrayMap<String, AutofillId> fields) throws JSONException {
 
         String packageName = context.getPackageName();
         FillResponse.Builder response = new FillResponse.Builder();
@@ -614,9 +576,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
             hints[i] = fields.keyAt(i);
             ids[i] = fields.valueAt(i);
         }
-
-        Log.e("TEST", androidUri);
-        Log.e("TEST", Arrays.toString(hints));
 
         intent.putExtra("username", hints[0]);
         intent.putExtra("password", hints[1]);
