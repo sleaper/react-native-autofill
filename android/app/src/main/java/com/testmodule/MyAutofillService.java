@@ -1,22 +1,15 @@
 package com.testmodule;
 
-import android.Manifest;
-import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AppOpsManager;
 import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
-import android.app.usage.UsageEvents;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
@@ -42,8 +35,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
@@ -57,7 +48,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +56,6 @@ import java.util.TreeMap;
 
 import static android.app.AppOpsManager.OPSTR_GET_USAGE_STATS;
 import static android.os.Process.myUid;
-import static androidx.core.app.AppOpsManagerCompat.MODE_ALLOWED;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class MyAutofillService extends AutofillService implements NativeModule {
@@ -100,7 +89,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
         
         mAuthenticateResponses = false;
         mAuthenticateDatasets = false;
-        String test = "";
 
 
         AppOpsManager appOps = (AppOpsManager) this.getApplicationContext().getSystemService(Context.APP_OPS_SERVICE);
@@ -119,8 +107,6 @@ public class MyAutofillService extends AutofillService implements NativeModule {
 //        if (ContextCompat.checkSelfPermission(this, Manifest.permission.PACKAGE_USAGE_STATS)
 //                != PackageManager.PERMISSION_GRANTED) {
 //        }
-
-        Log.e(TAG, "TEST: " + test);
 
 
         myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);

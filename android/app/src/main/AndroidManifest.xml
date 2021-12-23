@@ -39,14 +39,6 @@
             android:taskAffinity=".AuthActivity"
             android:label="AuthActivity"/>
 
-        <!-- Start the Service if applicable on boot -->
-        <receiver android:name=".ServiceStarter"  android:enabled="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </receiver>
-
         <service android:name="com.testmodule.MyTaskService" android:enabled="true" android:label="MyTaskService" android:permission="android.permission.WAKE_LOCK" android:exported="false" />
 
 
